@@ -14,6 +14,7 @@ crawlergo 目前支持以下特性：
 * 智能URL去重，去掉大部分的重复请求
 * 全面分析收集，包括javascript文件内容、页面注释、robots.txt文件和常见路径Fuzz
 * 支持Host绑定，自动添加Referer
+* 支持请求代理，支持爬虫结果主动推送
 
 目前开放编译好的程序给大家使用，该项目属于商业化产品的一部分，代码暂无法开源。
 
@@ -34,11 +35,21 @@ crawlergo 目前支持以下特性：
 
 ### Go！
 
-假设你的chromium安装在 `/tmp/chromium/` ，开启最大20标签页，爬取AWVS靶场：
+假设你的chromium安装在 `/tmp/chromium/` ，开启最大10标签页，爬取AWVS靶场：
 
 ```shell
-./crawlergo -c /tmp/chromium/chrome -t 20 http://testphp.vulnweb.com/
+./crawlergo -c /tmp/chromium/chrome -t 10 http://testphp.vulnweb.com/
 ```
+
+
+
+### 使用代理
+
+```shell
+./crawlergo -c /tmp/chromium/chrome -t 10 --request-proxy socks5://127.0.0.1:7891 http://testphp.vulnweb.com/
+```
+
+
 
 ### 系统调用
 
@@ -76,7 +87,9 @@ if __name__ == '__main__':
 * `all_domain_list`：发现的所有域名列表。
 * `sub_domain_list`：发现的任务目标的子域名列表。
 
-## 参数说明
+
+
+## 完整参数说明
 
 crawlergo 拥有灵活的参数配置，以下是详细的选项说明：
 
@@ -85,48 +98,50 @@ crawlergo 拥有灵活的参数配置，以下是详细的选项说明：
 * `--post-data PostData, -d PostData`   提供POST数据，目标使用POST请求方法
 * `--max-crawled-count Number, -m Number`   爬虫最大任务数量，避免因伪静态造成长时间无意义抓取。
 * `--filter-mode Mode, -f Mode`   过滤模式，简单：只过滤静态资源和完全重复的请求。智能：拥有过滤伪静态的能力。严格：更加严格的伪静态过滤规则。
-* `--output-mode value, -o value`   结果输出模式，console：打印当前域名结果。json：打印所有结果的json序列化字符串，可直接被反序列化解析。
+* `--output-mode value, -o value`   结果输出模式，`console`：打印当前域名结果。`json`：打印所有结果的json序列化字符串，可直接被反序列化解析。`none`：不打印输出。
+* `--output-json filepath` 将爬虫结果JSON序列化之后写入到json文件。
 * `--incognito-context, -i`   浏览器启动隐身模式
 * `--max-tab-count Number, -t Number`   爬虫同时开启最大标签页，即同时爬取的页面数量。
 * `--fuzz-path`  使用常见路径Fuzz目标，获取更多入口。
-* `--robots-path` 从robots.txt 文件中解析路径，获取更多入口。
+* `--robots-path` 从 /robots.txt 文件中解析路径，获取更多入口。
+* `--request-proxy proxyAddress` 支持**socks5**代理，crawlergo和chrome浏览器的所有网络请求均经过代理发送。
 * `--tab-run-timeout Timeout`   单个Tab标签页的最大运行超时。
 * `--wait-dom-content-loaded-timeout Timeout`  爬虫等待页面加载完毕的最大超时。
 * `--event-trigger-interval Interval` 事件自动触发时的间隔时间，一般用于目标网络缓慢，DOM更新冲突时导致的URL漏抓。
 * `--event-trigger-mode Value` 事件自动触发的模式，分为异步和同步，用于DOM更新冲突时导致的URL漏抓。
 * `--before-exit-delay` 单个tab标签页任务结束时，延迟退出关闭chrome的时间，用于等待部分DOM更新和XHR请求的发起捕获。
-* `--ignore-url-keywords` 不想访问的URL关键字，一般用于在携带Cookie访问时排除注销链接。
+* `--ignore-url-keywords` 不想访问的URL关键字，一般用于在携带Cookie访问时排除注销链接。用法：`-iuk logout -iuk exit`。
+* `--form-values` 自定义表单填充的值，按照文本类型设置。支持定义类型：default, mail, code, phone, username, password, qq, id_card, url, date, number，文本类型通过输入框标签的`id`、`name`、`class`、`type`四个属性值关键字进行识别。如，定义邮箱输入框自动填充A，密码输入框自动填充B，`-fv mail=A -fv password=B`。其中default代表无法识别文本类型时的默认填充值，目前为Cralwergo。
+* `--form-keyword-values` 自定义表单填充的值，按照关键字模糊匹配设置。关键字匹配输入框标签的`id`、`name`、`class`、`type`四个属性值。如，模糊匹配pass关键词填充123456，user关键词填充admin，`-fkv user=admin -fkv pass=123456`。
+* `--push-to-proxy` 拟接收爬虫结果的监听地址，一般为被动扫描器的监听地址。
+* `--push-pool-max` 发送爬虫结果到监听地址时的最大并发数。
+* `--log-level` 打印日志等级，可选 debug, info, warn, error 和 fatal。
 
-## Bypass headless detect
 
-https://intoli.com/blog/not-possible-to-block-chrome-headless/chrome-headless-test.html
 
-![](./imgs/bypass.png)
-
-## 关于360天相
-
-crawlergo是[**360天相**](https://skp.360.cn/)的子模块，天相是360自研的**资产管理与威胁探测系统**，主打强大的资产识别能力和全方位分析体系，拥有高效率的扫描能力，核心技术由 [360 0KeeTeam](https://0kee.360.cn/) 和 [360 RedTeam](http://redteam.360.cn/) 提供支持。
-
-![](./imgs/skp.png)
-
-详情请访问：[https://skp.360.cn/](https://skp.360.cn/)
-
-## 推荐用法
+## 使用举例
 
 crawlergo 返回了全量的请求和URL信息，可以有多种使用方法：
 
-* 联动其它的开源被动扫描器  example
+* 联动其它的开源被动扫描器
+
+  首先，启动某被动扫描器，设置监听地址为：`http://127.0.0.1:1234/`。
+
+  接下来，假设crawlergo与扫描器在同一台机器，启动 crawlergo，设置参数：
+
+  `--push-to-proxy http://127.0.0.1:1234/`
+
 * 子域名收集  example
+
 * 旁站入口收集  example
+
 * 结合celery实现分布式扫描
+
 * Host绑定设置（高版本chrome无法使用）  [(查看例子)](https://github.com/0Kee-Team/crawlergo/blob/master/examples/host_binding.py)
+
 * 带Cookie扫描  [(查看例子)](https://github.com/0Kee-Team/crawlergo/blob/master/examples/request_with_cookie.py)
 
-## // TODO
-
-* 支持不同Host的目标输入
-* 支持从文件中读取请求作为输入
-* 输出结果到消息队列
+* 调用crawlergo调用产生僵尸进程，定时清理 [(查看例子)](https://github.com/0Kee-Team/crawlergo/blob/master/examples/zombie_clean.py) , contributed by @ring04h
 
 ## Trouble Shooting
 
@@ -152,7 +167,28 @@ crawlergo 返回了全量的请求和URL信息，可以有多种使用方法：
   sudo yum update nss -y
   ```
 
-  
+
+* 运行提示**导航超时** / 浏览器无法找到 / 不知道正确的**浏览器可执行文件路径**
+
+  确认配置的浏览器可执行路径正确，在地址栏中输入：`chrome://version`，找到可执行程序文件路径：
+
+  ![](./imgs/chrome_path.png)
+
+## Bypass headless detect
+
+https://intoli.com/blog/not-possible-to-block-chrome-headless/chrome-headless-test.html
+
+![](./imgs/bypass.png)
+
+## 关于360天相
+
+crawlergo是[**360天相**](https://skp.360.cn/)的子模块，天相是360自研的**资产管理与威胁探测系统**，主打强大的资产识别能力和全方位分析体系，拥有高效率的扫描能力，核心技术由 [360 0KeeTeam](https://0kee.360.cn/) 和 [360 RedTeam](http://redteam.360.cn/) 提供支持。
+
+![](./imgs/skp.png)
+
+详情请访问：[https://skp.360.cn/](https://skp.360.cn/)
+
+
 
 ## Follow me
 
